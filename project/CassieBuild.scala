@@ -51,8 +51,7 @@ object CassieBuild extends Build with Libraries {
     base = file("core"),
     settings = Project.defaultSettings ++
       sharedSettings ++
-      SbtStartScript.startScriptForClassesSettings ++
-      ScroogeSBT.newSettings
+      SbtStartScript.startScriptForClassesSettings
   ).settings(
     name := "cassie-core",
 
