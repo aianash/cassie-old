@@ -38,14 +38,14 @@ object CassieBuild extends Build with Libraries {
 
     publishMavenStyle := true
   ) ++ net.virtualvoid.sbt.graph.Plugin.graphSettings
-  
+
   lazy val cassie = Project(
     id = "cassie",
     base = file("."),
     settings = Project.defaultSettings
-  ).aggregate(core, service)
+  ).aggregate(core, service, catalogue)
 
-  
+
   lazy val core = Project(
     id = "cassie-core",
     base = file("core"),
@@ -66,7 +66,46 @@ object CassieBuild extends Build with Libraries {
       ++ Libs.msgpack
   )
 
-    lazy val service = Project(
+
+  lazy val store = Project(
+    id = "cassie-store",
+    base = file("store"),
+    settings = Project.defaultSettings ++
+      sharedSettings ++
+      SbtStartScript.startScriptForClassesSettings
+  ).settings(
+    name := "cassie-store",
+
+    libraryDependencies ++= Seq(
+    ) ++ Libs.akka
+      ++ Libs.slf4j
+      ++ Libs.logback
+      ++ Libs.phantom
+      ++ Libs.playJson
+      ++ Libs.catalogueCommons
+  ).dependsOn(core)
+
+
+  lazy val catalogue = Project(
+    id = "cassie-catalogue",
+    base = file("catalogue"),
+    settings = Project.defaultSettings ++
+      sharedSettings ++
+      SbtStartScript.startScriptForClassesSettings
+  ).settings(
+    name := "cassie-catalogue",
+
+    libraryDependencies ++= Seq(
+    ) ++ Libs.akka
+      ++ Libs.slf4j
+      ++ Libs.logback
+      ++ Libs.phantom
+      ++ Libs.playJson
+      ++ Libs.catalogueCommons
+  ).dependsOn(core)
+
+
+  lazy val service = Project(
     id = "cassie-service",
     base = file("service"),
     settings = Project.defaultSettings ++
@@ -87,7 +126,7 @@ object CassieBuild extends Build with Libraries {
       ++ Libs.bijection
       ++ Libs.kafka
       ++ Libs.msgpack
-  ).dependsOn(core)
+  ).dependsOn(core, catalogue)
 
 
 }
