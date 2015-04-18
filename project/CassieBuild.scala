@@ -43,7 +43,7 @@ object CassieBuild extends Build with Libraries {
     id = "cassie",
     base = file("."),
     settings = Project.defaultSettings
-  ).aggregate(core, service, catalogue)
+  ).aggregate(core, service, catalogue, store)
 
 
   lazy val core = Project(
@@ -125,7 +125,7 @@ object CassieBuild extends Build with Libraries {
       ++ Libs.bijection
       ++ Libs.kafka
       ++ Libs.msgpack
-  ).dependsOn(core, catalogue)
+  ).dependsOn(core, catalogue, store)
 
 
 }

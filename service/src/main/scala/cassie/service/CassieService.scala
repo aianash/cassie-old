@@ -29,8 +29,9 @@ import com.twitter.finagle.builder.ServerBuilder
 
 import org.apache.thrift.protocol.TBinaryProtocol
 
-import cassie.catalogue._, protocols._
-
+import cassie._
+import cassie.catalogue._, catalogue.protocols._
+import cassie.store._, cassie.store.protocols._
 
 class CassieService(implicit inj: Injector) extends Cassie[TwitterFuture] {
 
@@ -47,7 +48,7 @@ class CassieService(implicit inj: Injector) extends Cassie[TwitterFuture] {
   implicit val defaultTimeout = Timeout(1 seconds)
 
   private val Catalogue = system.actorOf(CatalogueSupervisor.props)
-
+  private val Store     = system.actorOf(StoreSupervisor.props)
   ////////////////////
   // Catalogue APIs //
   ////////////////////
@@ -61,7 +62,6 @@ class CassieService(implicit inj: Injector) extends Cassie[TwitterFuture] {
   }
 
 
-
   def getStoreCatalogueForType(storeId: StoreId, itemTypes: Seq[ItemType]) = {
     val itemsF = Catalogue ?= GetStoreCatalogueForTypes(storeId, itemTypes)
 
@@ -69,6 +69,7 @@ class CassieService(implicit inj: Injector) extends Cassie[TwitterFuture] {
       case NonFatal(ex) => TFailure(CassieException("Error while creating user"))
     })
   }
+
 
   def getCatalogueItems(itemIds: Seq[CatalogueItemId], detailType: CatalogeItemDetailType) = {
     val itemsF = Catalogue ?= GetCatalogueItems(itemIds)
@@ -78,6 +79,37 @@ class CassieService(implicit inj: Injector) extends Cassie[TwitterFuture] {
     })
   }
 
+
+  ////////////////
+  // Store APIs //
+  ////////////////
+
+  def createOrUpdateStore(storeType: StoreType, info: StoreInfo) = {
+    val storeIdF: Future[StoreId] =
+      info.email.map { email =>
+        (Store ?= IsExistingStore(email)).flatMap { storeIdO =>
+          storeIdO match {
+            case Some(storeId) => (Store ?= UpdateStore(storeId, info)).map(_ => storeId)
+            case None          =>  Store ?= CreateStore(storeType, info)
+          }
+        }
+      } getOrElse {
+        Store ?= CreateStore(storeType, info)
+      }
+
+    awaitResult(storeIdF, 500 milliseconds, {
+      case NonFatal(ex) => TFailure(CassieException("Error creating/updating store"))
+    })
+  }
+
+
+  def getStore(storeId: StoreId, fields: Seq[StoreInfoField]) = {
+    val storeF = Store ?= GetStore(storeId, fields)
+
+    awaitResult(storeF, 500 milliseconds, {
+      case NonFatal(ex) => TFailure(CassieException("Error getting store info"))
+    })
+  }
 
 
   /**
