@@ -43,13 +43,28 @@ trait Libraries {
     val storehaus       = "0.9.0"
     val retry           = "0.2.0"
     val odelay          = "0.1.0"
-    val researchpaperParser = "1.0"
     val kafka           = "0.8.2.0"
+    val phantom         = "1.5.0"
+    val play            = "2.3.8"
+    val researchpaperParser = "1.0"
+    val catalogueCommons    = "0.0.1"
   }
 
 
 
   object Libs {
+
+    val playJson = Seq (
+      "com.typesafe.play" %% "play-json" % Version.play)
+
+
+    val phantom = Seq (
+      "com.websudos" %% "phantom-dsl" % Version.phantom,
+      "com.websudos" %% "phantom-udt" % Version.phantom)
+
+    val catalogueCommons = Seq(
+      "com.goshoplane" %% "commons-catalogue" % Version.catalogueCommons)
+
 
     val factorie = Seq (
       "cc.factorie" % "factorie" % Version.factorie)
