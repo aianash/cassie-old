@@ -50,4 +50,16 @@ sealed class CatalogueDatastore(val settings: CatalogueSettings)
   def getCatalogueItem(itemId: CatalogueItemId)(implicit executor: ExecutionContext) =
     CatalogueItems.getCatalogueItemBy(itemId).one()
 
+
+  def insertCatalogueItems(items: Seq[CatalogueItem])(implicit executor: ExecutionContext) = {
+    val batch = BatchStatement()
+
+    items.foreach { item =>
+      batch add CatalogueItems.insertCatalogueItem(item)
+      batch add CatalogueItemsByItemType.insertCatalogueItem(item)
+    }
+
+    batch.future().map(_ => true)
+  }
+
 }

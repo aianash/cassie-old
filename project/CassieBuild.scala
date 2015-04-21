@@ -43,7 +43,7 @@ object CassieBuild extends Build with Libraries {
     id = "cassie",
     base = file("."),
     settings = Project.defaultSettings
-  ).aggregate(core, service, catalogue, store)
+  ).aggregate(core, service, catalogue, store, asterix)
 
 
   lazy val core = Project(
@@ -102,6 +102,31 @@ object CassieBuild extends Build with Libraries {
       ++ Libs.playJson
       ++ Libs.catalogueCommons
   ).dependsOn(core)
+
+
+  lazy val asterix = Project(
+    id = "cassie-asterix",
+    base = file("asterix"),
+    settings = Project.defaultSettings ++
+      sharedSettings ++
+      SbtStartScript.startScriptForClassesSettings
+  ).settings(
+    name := "cassie-asterix",
+
+    libraryDependencies ++= Seq(
+    ) ++ Libs.akka
+      ++ Libs.slf4j
+      ++ Libs.logback
+      ++ Libs.finagleCore
+      ++ Libs.scalaJLine
+      ++ Libs.mimepull
+      ++ Libs.scaldi
+      ++ Libs.scaldiAkka
+      ++ Libs.bijection
+      ++ Libs.kafka
+      ++ Libs.msgpack
+      ++ Libs.catalogueCommons
+  ).dependsOn(core, catalogue, store)
 
 
   lazy val service = Project(
