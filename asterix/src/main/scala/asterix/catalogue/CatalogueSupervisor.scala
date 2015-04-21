@@ -1,27 +1,22 @@
 package asterix.catalogue
 
-import akka.actor.{Actor, ActorRef, ActorLogging, Props, Terminated}
-import akka.pattern.ask
-import akka.util.Timeout
+import scala.concurrent._, duration._
+import scala.collection.mutable.{Queue => MutableQueue, Map => MutableMap}
+import scala.util.{Sorting, Random}
 
 import java.util.UUID
 
-import scala.concurrent._, duration._
-import scala.collection.mutable.{Queue => MutableQueue, Map => MutableMap}
-import scala.util.Sorting
+import akka.actor.{Actor, ActorRef, ActorLogging, Props, Terminated}
+import akka.pattern.ask
+import akka.util.Timeout
 
 import goshoplane.commons.catalogue._
 import goshoplane.commons.core.protocols.Implicits._
 
 import cassie.catalogue._, store.CatalogueDatastore
 
-import scala.util.Random
-
 import scalaz._, Scalaz._
 
-
-case class InjectionJobId(id: Long)
-case class InjectionJob(jobId: InjectionJobId, catalogueItems: List[CatalogueItem])
 
 class CatalogueSupervisor(consumer: ActorRef) extends Actor with ActorLogging {
 
@@ -37,7 +32,7 @@ class CatalogueSupervisor(consumer: ActorRef) extends Actor with ActorLogging {
   val requests            = MutableQueue.empty[ActorRef]
   val retryQueue          = MutableQueue.empty[CatalogueItem]
   val prefetched          = MutableQueue.empty[CatalogueItem]
-  var jobSchedulingStatus = Future {true}
+  var jobSchedulingStatus = Future.successful(true)
 
 
   (0 until NrOfInjectors).foreach { _ =>
@@ -128,7 +123,7 @@ class CatalogueSupervisor(consumer: ActorRef) extends Actor with ActorLogging {
           }
       Future.successful(batch)
     } else {
-      implicit val timeout = Timeout(5 seconds)
+      implicit val timeout = Timeout(ConsumerTimoutMs seconds)
       (consumer ?= GetNextBatch(InjectionBatchSize)).map(_.batch)
     }
   }

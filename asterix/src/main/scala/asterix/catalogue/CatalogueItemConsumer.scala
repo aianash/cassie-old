@@ -2,14 +2,16 @@ package asterix.catalogue
 
 import scala.util.{Try, Success, Failure}
 
-import akka.actor.Actor
+import java.util.Properties
+
+import akka.actor.{Actor, Props}
 
 import kafka.consumer._
 import kafka.serializer.StringDecoder
 
 import goshoplane.commons.catalogue.CatalogueItem
-
 import goshoplane.commons.catalogue.kafka.serializers.SerializedCatalogueItemDecoder
+
 
 class CatalogueItemConsumer(connector: ConsumerConnector) extends Actor {
 
@@ -51,6 +53,33 @@ class CatalogueItemConsumer(connector: ConsumerConnector) extends Actor {
           }
       }
     }
+  }
+
+}
+
+
+object CatalogueItemConsumer {
+
+  def props(connector: ConsumerConnector) = Props(classOf[CatalogueItemConsumer], connector)
+
+  def props(settings: AsterixSettings): Props = props(defaultConnector(settings))
+
+
+  /**
+   * Returns an instance of ConsumerConnector with settings as an
+   * input parameter
+   */
+  def defaultConnector(settings: AsterixSettings): ConsumerConnector = {
+    import settings._
+    val props = new Properties()
+
+    props.put("group.id",             GroupId)
+    props.put("zookeeper.connect",    ZookeeperConnect)
+    props.put("auto.offset.reset",    AutoOffsetReset)
+    props.put("consumer.timeout.ms",  ConsumerTimoutMs.toString)
+
+    val config = new ConsumerConfig(props)
+    Consumer.create(config)
   }
 
 }

@@ -17,7 +17,7 @@ class AsterixSettings(cfg: Config) extends Extension {
   val GroupId                     = config.getString("asterix.catalogue.kafka.group-id")
   val ZookeeperConnect            = config.getString("asterix.catalogue.kafka.zookeeper-connect")
   val AutoOffsetReset             = config.getString("asterix.catalogue.kafka.auto-offset-reset")
-  val ConsumerTimoutMs            = config.getString("asterix.catalogue.kafka.consumer-timeout-ms")
+  val ConsumerTimoutMs            = config.getInt("asterix.catalogue.kafka.consumer-timeout-ms")
   val KafkaTopic                  = config.getString("asterix.catalogue.kafka.topic")
   val ActorSystem                 = config.getString("asterix.catalogue.actorSystem")
   val InjectionBatchSize          = config.getInt("asterix.catalogue.injector.batch-size")

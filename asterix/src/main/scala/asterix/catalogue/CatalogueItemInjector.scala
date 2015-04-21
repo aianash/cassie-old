@@ -1,14 +1,11 @@
 package asterix.catalogue
 
-
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{Try, Success, Failure}
 import scala.collection.mutable.ListBuffer
 
-import akka.actor.Actor
-import akka.actor.Props
-import akka.actor.ActorRef
+import akka.actor.{Actor, Props, ActorRef}
 
 import goshoplane.commons.catalogue._
 
