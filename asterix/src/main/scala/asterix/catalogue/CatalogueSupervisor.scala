@@ -34,6 +34,7 @@ class CatalogueSupervisor(consumer: ActorRef) extends Actor with ActorLogging {
   val prefetched          = MutableQueue.empty[CatalogueItem]
   var jobSchedulingStatus = Future.successful(true)
 
+  store.init()
 
   (0 until NrOfInjectors).foreach { _ =>
     context.actorOf(CatalogueItemInjector.props(store, self))
@@ -96,9 +97,9 @@ class CatalogueSupervisor(consumer: ActorRef) extends Actor with ActorLogging {
   private var currentBackoffIter = 0;
 
   private def backOffScheduling = {
-    if(currentBackoffIter > IndexSchedulingBackoffLimit) currentBackoffIter = 0
+    if(currentBackoffIter > InjectionBackoffLimit) currentBackoffIter = 0
     currentBackoffIter += 1
-    val interval = (Math.pow(2, currentBackoffIter) - 1 ) / 2
+    val interval = (Math.pow(2, currentBackoffIter) - 1 ) / 2 * InjectionBackoffTime
     context.system.scheduler.scheduleOnce(interval milliseconds, self, CheckAndScheduleJob)
   }
 

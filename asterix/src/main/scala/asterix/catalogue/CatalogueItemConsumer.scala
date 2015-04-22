@@ -4,7 +4,7 @@ import scala.util.{Try, Success, Failure}
 
 import java.util.Properties
 
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, Props, ActorLogging}
 
 import kafka.consumer._
 import kafka.serializer.StringDecoder
@@ -13,7 +13,7 @@ import goshoplane.commons.catalogue.CatalogueItem
 import goshoplane.commons.catalogue.kafka.serializers.SerializedCatalogueItemDecoder
 
 
-class CatalogueItemConsumer(connector: ConsumerConnector) extends Actor {
+class CatalogueItemConsumer(connector: ConsumerConnector) extends Actor with ActorLogging {
 
   val settings = AsterixSettings(context.system)
 
@@ -31,16 +31,20 @@ class CatalogueItemConsumer(connector: ConsumerConnector) extends Actor {
 
       getNextBatch(batchSize) match {
         case Success(batch) => replyTo ! CatalogueItemBatch(batch = batch)
-        case Failure(ex)    => replyTo ! akka.actor.Status.Failure(ex)
+        case Failure(ex)    =>
+          log.error(ex, "Error while getting next catalogue batch")
+          replyTo ! CatalogueItemBatch(batch = List.empty[CatalogueItem])
       }
   }
+
+
 
   /**
    * Return next batch of catalogue items from kafka topic
    */
   private def getNextBatch(batchSize: Int) = {
     Try {
-      (0 to batchSize).foldLeft (List.empty[CatalogueItem]) { (batch, _) =>
+      (0 until batchSize).foldLeft (List.empty[CatalogueItem]) { (batch, _) =>
 
         Try {iterator.next().message}
           .map(CatalogueItem.decode(_))
