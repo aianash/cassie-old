@@ -27,7 +27,7 @@ trait Libraries {
     val commonsLang     = "2.6"
     val provoz          = "0.0.1"
     val hemingway       = "1.0.0"
-    val libThrift       = "0.8.0" // [check update to] 0.9.1
+    val libThrift       = "0.9.2" // [check update to] 0.9.1
     val bijection       = "0.6.2"
     val scrooge         = "3.17.0"
     val commonsConfig   = "1.9"
@@ -236,11 +236,19 @@ trait Libraries {
 
 
     val twitterUtil = Seq (
-      "com.twitter" %% "util-core"      % Version.twitterUtil)
+      "com.twitter" %% "util-core" % Version.twitterUtil)
 
     val kafka = Seq (
       "org.apache.kafka" % "kafka-clients" % Version.kafka,
-      "org.apache.kafka" %% "kafka" % Version.kafka )
+      "org.apache.kafka" %% "kafka" % Version.kafka
+          exclude("javax.jms", "jms")
+          exclude("com.sun.jdmk", "jmxtools")
+          exclude("com.sun.jmx", "jmxri")
+          exclude("org.slf4j", "slf4j-simple")
+          exclude("log4j", "log4j")
+          exclude("org.slf4j", "slf4j-log4j12")
+          exclude("com.twitter.common", "args")
+          exclude("org.apache.zookeeper", "zookeeper"))
 
   }
 }

@@ -27,7 +27,7 @@ object CassieBuild extends Build with Libraries {
     javaOptions += "-Xmx2500M",
 
     resolvers ++= Seq(
-      "ReaderDeck Releases" at "http://repo.readerdeck.com/artifactory/readerdeck-releases",
+      // "ReaderDeck Releases" at "http://repo.readerdeck.com/artifactory/readerdeck-releases",
       "anormcypher" at "http://repo.anormcypher.org/",
       "Akka Repository" at "http://repo.akka.io/releases",
       "Spray Repository" at "http://repo.spray.io/",
@@ -43,7 +43,7 @@ object CassieBuild extends Build with Libraries {
     id = "cassie",
     base = file("."),
     settings = Project.defaultSettings
-  ).aggregate(core, service, catalogue, store)
+  ).aggregate(core, service, catalogue, store, asterix)
 
 
   lazy val core = Project(
@@ -94,6 +94,13 @@ object CassieBuild extends Build with Libraries {
   ).settings(
     name := "cassie-catalogue",
 
+    assemblyMergeStrategy in assembly := {
+      case PathList(ps @ _*) if ps.last endsWith ".txt.1" => MergeStrategy.first
+      case x =>
+        val oldStrategy = (assemblyMergeStrategy in assembly).value
+        oldStrategy(x)
+    },
+
     libraryDependencies ++= Seq(
     ) ++ Libs.akka
       ++ Libs.slf4j
@@ -102,6 +109,37 @@ object CassieBuild extends Build with Libraries {
       ++ Libs.playJson
       ++ Libs.catalogueCommons
   ).dependsOn(core)
+
+
+  lazy val asterix = Project(
+    id = "cassie-asterix",
+    base = file("asterix"),
+    settings = Project.defaultSettings ++
+      sharedSettings ++
+      SbtStartScript.startScriptForClassesSettings
+  ).settings(
+    name := "cassie-asterix",
+
+    assemblyMergeStrategy in assembly := {
+      case PathList(ps @ _*) if ps.last endsWith ".txt.1" => MergeStrategy.first
+      case x =>
+        val oldStrategy = (assemblyMergeStrategy in assembly).value
+        oldStrategy(x)
+    },
+
+    libraryDependencies ++= Seq(
+    ) ++ Libs.akka
+      ++ Libs.slf4j
+      ++ Libs.logback
+      ++ Libs.finagleCore
+      ++ Libs.mimepull
+      ++ Libs.scaldi
+      ++ Libs.scaldiAkka
+      ++ Libs.bijection
+      ++ Libs.kafka
+      ++ Libs.msgpack
+      ++ Libs.catalogueCommons
+  ).dependsOn(core, catalogue, store)
 
 
   lazy val service = Project(
@@ -113,17 +151,22 @@ object CassieBuild extends Build with Libraries {
   ).settings(
     name := "cassie-service",
 
+    assemblyMergeStrategy in assembly := {
+      case PathList(ps @ _*) if ps.last endsWith ".txt.1" => MergeStrategy.first
+      case x =>
+        val oldStrategy = (assemblyMergeStrategy in assembly).value
+        oldStrategy(x)
+    },
+
     libraryDependencies ++= Seq(
     ) ++ Libs.akka
       ++ Libs.slf4j
       ++ Libs.logback
       ++ Libs.finagleCore
-      ++ Libs.scalaJLine
       ++ Libs.mimepull
       ++ Libs.scaldi
       ++ Libs.scaldiAkka
       ++ Libs.bijection
-      ++ Libs.kafka
       ++ Libs.msgpack
   ).dependsOn(core, catalogue, store)
 
