@@ -33,7 +33,13 @@ class CatalogueItems(val settings: CatalogueSettings)
   object itemType extends StringColumn(this)
   object itemTypeGroups extends SetColumn[CatalogueItems, CatalogueItem, String](this)
   object namedType extends StringColumn(this)
+
   object productTitle extends StringColumn(this)
+
+  // image
+  object small extends StringColumn(this)
+  object medium extends StringColumn(this)
+  object large extends StringColumn(this)
 
   object attributes extends MapColumn[CatalogueItems, CatalogueItem, String, String](this)
 
@@ -48,27 +54,16 @@ class CatalogueItems(val settings: CatalogueSettings)
    */
   override def fromRow(row: Row) = {
 
-    val attr        = attributes(row)
-
-    val colors      = attr.get("colors").map(c => genericArrayOps(c.split(",")).toSeq).getOrElse(Seq.empty[String])
-    val sizes       = attr.get("sizes") .map(s => genericArrayOps(s.split(",")).toSeq).getOrElse(Seq.empty[String])
-    val brand       = attr.get("brand") .getOrElse("unknown")
-    val description = attr.get("description").getOrElse("")
-    val price       = attr.get("price").map(augmentString(_).toFloat).getOrElse(-1.0f)
-
     val groups      = itemTypeGroups(row).flatMap(gs => ItemTypeGroup.values.find(_.toString == gs)).toArray
 
-    ClothingItem(
+    ClothingItem.create(
       itemId         = CatalogueItemId(storeId = StoreId(stuid(row)), cuid = cuid(row)),
       itemType       = ItemType.valueOf(itemType(row)).getOrElse(ItemType.Unknown),
       itemTypeGroups = ItemTypeGroups(groups),
       namedType      = NamedType(namedType(row)),
       productTitle   = ProductTitle(productTitle(row)),
-      colors         = Colors(colors),
-      sizes          = Sizes(sizes),
-      brand          = Brand(brand),
-      description    = Description(description),
-      price          = Price(price)
+      productImage   = ProductImage(small(row), medium(row), large(row)),
+      attributes     = attributes(row)
     )
   }
 
@@ -77,21 +72,21 @@ class CatalogueItems(val settings: CatalogueSettings)
 
     val item = catalogueItem.asInstanceOf[ClothingItem]  // [IMP] Better way coming soon
 
-    val attr = MutableMap[String, String]()
-    attr += ("colors"      -> item.colors.values.mkString(","))
-    attr += ("sizes"       -> item.sizes.values.mkString(","))
-    attr += ("brand"       -> item.brand.name)
-    attr += ("description" -> item.description.text)
-    attr += ("price"       -> item.price.value.toString)
-
     insert
       .value(_.stuid,           item.itemId.storeId.stuid)
       .value(_.cuid,            item.itemId.cuid)
+
       .value(_.itemType,        item.itemType.name)
       .value(_.itemTypeGroups,  item.itemTypeGroups.groups.map(_.toString).toSet)
       .value(_.namedType,       item.namedType.name)
+
       .value(_.productTitle,    item.productTitle.title)
-      .value(_.attributes,      attr.toMap)
+
+      .value(_.small,           item.productImage.small)
+      .value(_.medium,          item.productImage.medium)
+      .value(_.large,           item.productImage.large)
+
+      .value(_.attributes,      item.attributesMap)
   }
 
 
