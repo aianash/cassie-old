@@ -38,6 +38,7 @@ class StoreSupervisor extends Actor with ActorLogging {
       storeDatastore.isExistingStore(email) pipeTo sender()
 
 
+    // [TO DO] Check and validate store information
     case CreateStore(storeType, info) =>
       implicit val timeout = Timeout(1 seconds)
 
