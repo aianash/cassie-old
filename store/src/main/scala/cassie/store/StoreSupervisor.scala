@@ -57,8 +57,13 @@ class StoreSupervisor extends Actor with ActorLogging {
 
 
 
+    case GetStores(storeIds, fields) =>
+      Future.sequence(storeIds.map(storeDatastore.getStore(_, fields))) pipeTo sender()
+
+
     case GetStore(storeId, fields) =>
       storeDatastore.getStore(storeId, fields) pipeTo sender()
+
   }
 }
 

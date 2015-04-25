@@ -112,6 +112,15 @@ class CassieService(implicit inj: Injector) extends Cassie[TwitterFuture] {
   }
 
 
+  def getStores(storeIds: Seq[StoreId], fields: Seq[StoreInfoField]) = {
+    val storesF = Store ?= GetStores(storeIds, fields)
+
+    awaitResult(storesF, 500 milliseconds, {
+      case NonFatal(ex) => TFailure(CassieException("Error getting stores info"))
+    })
+  }
+
+
   /**
    * A helper method to await on Scala Future and encapsulate the result into TwitterFuture
    */
