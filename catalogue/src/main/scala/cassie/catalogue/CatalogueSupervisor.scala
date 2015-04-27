@@ -30,13 +30,11 @@ class CatalogueSupervisor extends Actor with ActorLogging {
   def receive = {
 
     case GetStoreCatalogue(storeId) =>
-      catalogueDatastore.getStoreCatalogue(storeId)
-        .map(items => items.map(CatalogueItem.encode(_)).flatten) pipeTo sender()
+      catalogueDatastore.getStoreCatalogue(storeId) pipeTo sender()
 
 
     case GetStoreCatalogueForTypes(storeId, itemTypes) =>
-      catalogueDatastore.getStoreCatalogueForType(storeId, itemTypes)
-        .map(items => items.map(CatalogueItem.encode(_)).flatten) pipeTo sender()
+      catalogueDatastore.getStoreCatalogueForType(storeId, itemTypes) pipeTo sender()
 
 
     case GetCatalogueItems(itemIds) =>
@@ -46,7 +44,6 @@ class CatalogueSupervisor extends Actor with ActorLogging {
         grouped.toSeq.map {
           case (storeId, itemIds) =>
             catalogueDatastore.getCatalogueItems(storeId, itemIds)
-              .map(items => items.map(CatalogueItem.encode(_)).flatten)
         }
 
       Future.sequence(futureSeq).map(_.flatten) pipeTo sender()

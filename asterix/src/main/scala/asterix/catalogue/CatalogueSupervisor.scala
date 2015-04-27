@@ -10,7 +10,8 @@ import akka.actor.{Actor, ActorRef, ActorLogging, Props, Terminated}
 import akka.pattern.ask
 import akka.util.Timeout
 
-import goshoplane.commons.catalogue._
+import com.goshoplane.common._
+
 import goshoplane.commons.core.protocols.Implicits._
 
 import cassie.catalogue._, store.CatalogueDatastore
@@ -30,8 +31,8 @@ class CatalogueSupervisor(consumer: ActorRef) extends Actor with ActorLogging {
   val store               = new CatalogueDatastore(CatalogueSettings(context.system))
   val injectors           = MutableMap.empty[ActorRef, Option[InjectionJob]]
   val requests            = MutableQueue.empty[ActorRef]
-  val retryQueue          = MutableQueue.empty[CatalogueItem]
-  val prefetched          = MutableQueue.empty[CatalogueItem]
+  val retryQueue          = MutableQueue.empty[SerializedCatalogueItem]
+  val prefetched          = MutableQueue.empty[SerializedCatalogueItem]
   var jobSchedulingStatus = Future.successful(true)
 
   store.init()
@@ -112,14 +113,14 @@ class CatalogueSupervisor(consumer: ActorRef) extends Actor with ActorLogging {
     if(!prefetched.isEmpty) {
       val batch =
         (0 to Math.min(InjectionBatchSize, prefetched.length))
-          .foldLeft (List.empty[CatalogueItem]) { (batch, _) =>
+          .foldLeft (List.empty[SerializedCatalogueItem]) { (batch, _) =>
             prefetched.dequeue() :: batch
           }
       Future.successful(batch)
     } else if(!retryQueue.isEmpty) {
       val batch =
         (0 to Math.min(InjectionBatchSize, retryQueue.length))
-          .foldLeft (List.empty[CatalogueItem]) { (batch, _) =>
+          .foldLeft (List.empty[SerializedCatalogueItem]) { (batch, _) =>
             retryQueue.dequeue() :: batch
           }
       Future.successful(batch)

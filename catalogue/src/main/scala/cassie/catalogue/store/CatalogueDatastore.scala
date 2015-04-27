@@ -51,12 +51,14 @@ sealed class CatalogueDatastore(val settings: CatalogueSettings)
     CatalogueItems.getCatalogueItemBy(itemId).one()
 
 
-  def insertCatalogueItems(items: Seq[CatalogueItem])(implicit executor: ExecutionContext) = {
+  def insertCatalogueItems(items: Seq[SerializedCatalogueItem])(implicit executor: ExecutionContext) = {
     val batch = BatchStatement()
 
     items.foreach { item =>
-      batch add CatalogueItems.insertCatalogueItem(item)
-      batch add CatalogueItemsByItemType.insertCatalogueItem(item)
+      CatalogueItem.decode(item).foreach { decoded =>
+        batch add CatalogueItems.insertCatalogueItem(item)
+        batch add CatalogueItemsByItemType.insertCatalogueItem(decoded.itemType, item)
+      }
     }
 
     batch.future().map(_ => true)

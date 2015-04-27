@@ -23,28 +23,17 @@ import goshoplane.commons.catalogue._
 
 
 class CatalogueItems(val settings: CatalogueSettings)
-  extends CassandraTable[CatalogueItems, CatalogueItem] with CatalogueConnector {
+  extends CassandraTable[CatalogueItems, SerializedCatalogueItem] with CatalogueConnector {
 
   override def tableName = "catalogue_items"
 
   object stuid extends LongColumn(this) with PartitionKey[Long]
   object cuid extends LongColumn(this) with PrimaryKey[Long]
 
-  object itemType extends StringColumn(this)
-  object itemTypeGroups extends SetColumn[CatalogueItems, CatalogueItem, String](this)
-  object namedType extends StringColumn(this)
-
-  object productTitle extends StringColumn(this)
-
-  // image
-  object small extends StringColumn(this)
-  object medium extends StringColumn(this)
-  object large extends StringColumn(this)
-
-  object attributes extends MapColumn[CatalogueItems, CatalogueItem, String, String](this)
-
-  object details extends MapColumn[CatalogueItems, CatalogueItem, String, String](this)
-
+  // serializer identifiers
+  object sid extends StringColumn(this)
+  object stype extends StringColumn(this)
+  object stream extends BlobColumn(this)
 
 
   /**
@@ -53,41 +42,26 @@ class CatalogueItems(val settings: CatalogueSettings)
    * should be added very very soon
    */
   override def fromRow(row: Row) = {
+    val storeId        = StoreId(stuid = stuid(row))
+    val serializerType = SerializerType.valueOf(stype(row)).getOrElse(SerializerType.Msgpck)
 
-    val groups      = itemTypeGroups(row).flatMap(gs => ItemTypeGroup.values.find(_.toString == gs)).toArray
-
-    ClothingItem.create(
-      itemId         = CatalogueItemId(storeId = StoreId(stuid(row)), cuid = cuid(row)),
-      itemType       = ItemType.valueOf(itemType(row)).getOrElse(ItemType.Unknown),
-      itemTypeGroups = ItemTypeGroups(groups),
-      namedType      = NamedType(namedType(row)),
-      productTitle   = ProductTitle(productTitle(row)),
-      productImage   = ProductImage(small(row), medium(row), large(row)),
-      attributes     = attributes(row)
+    SerializedCatalogueItem(
+      itemId       = CatalogueItemId(storeId = storeId, cuid = cuid(row)),
+      serializerId = SerializerId(sid = sid(row), stype = serializerType),
+      stream       = stream(row)
     )
   }
 
 
-  def insertCatalogueItem(catalogueItem: CatalogueItem) = {
-
-    val item = catalogueItem.asInstanceOf[ClothingItem]  // [IMP] Better way coming soon
-
+  def insertCatalogueItem(item: SerializedCatalogueItem) =
     insert
-      .value(_.stuid,           item.itemId.storeId.stuid)
-      .value(_.cuid,            item.itemId.cuid)
+      .value(_.stuid,   item.itemId.storeId.stuid)
+      .value(_.cuid,    item.itemId.cuid)
 
-      .value(_.itemType,        item.itemType.name)
-      .value(_.itemTypeGroups,  item.itemTypeGroups.groups.map(_.toString).toSet)
-      .value(_.namedType,       item.namedType.name)
+      .value(_.sid,     item.serializerId.sid)
+      .value(_.stype,   item.serializerId.stype.name)
+      .value(_.stream,  item.stream)
 
-      .value(_.productTitle,    item.productTitle.title)
-
-      .value(_.small,           item.productImage.small)
-      .value(_.medium,          item.productImage.medium)
-      .value(_.large,           item.productImage.large)
-
-      .value(_.attributes,      item.attributesMap)
-  }
 
 
   def getCatalogueItemBy(itemId: CatalogueItemId) =
