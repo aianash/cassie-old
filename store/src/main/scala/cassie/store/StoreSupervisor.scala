@@ -44,7 +44,7 @@ class StoreSupervisor extends Actor with ActorLogging {
 
       val storeIdF =
         for {
-          stuid <- UUID ?= NextId("store")
+          stuid <- (UUID ?= NextId("store")).map(_.get)
           _     <- storeDatastore.insertStore(Store(StoreId(stuid), storeType, info))
         } yield StoreId(stuid)
 
@@ -58,7 +58,7 @@ class StoreSupervisor extends Actor with ActorLogging {
 
 
     case GetStores(storeIds, fields) =>
-      Future.sequence(storeIds.map(storeDatastore.getStore(_, fields))) pipeTo sender()
+      storeDatastore.getStores(storeIds, fields) pipeTo sender()
 
 
     case GetStore(storeId, fields) =>

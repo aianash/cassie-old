@@ -53,4 +53,8 @@ sealed class StoreDatastore(val settings: StoreSettings)
   def getStore(storeId: StoreId, fields: Seq[StoreInfoField])(implicit executor: ExecutionContext) =
     Stores.getStoreBy(storeId, fields).one()
 
+
+  // Improve this api
+  def getStores(storeIds: Seq[StoreId], fields: Seq[StoreInfoField])(implicit executor: ExecutionContext) =
+    Future.sequence(storeIds.map(getStore(_, fields))).map(_.flatMap(x => x))
 }

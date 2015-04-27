@@ -111,7 +111,7 @@ class Stores extends CassandraTable[Stores, Store] {
     fields.flatMap {
       case StoreInfoField.Name            => Seq("fullname", "handle")
       case StoreInfoField.ItemTypes       => Seq("itemTypes")
-      case StoreInfoField.Address         => Seq("lat", "lng", "addressTitle", "addressShort", "pincode", "country", "city")
+      case StoreInfoField.Address         => Seq("lat", "lng", "addressTitle", "addressShort", "addressFull", "pincode", "country", "city")
       case StoreInfoField.Avatar          => Seq("small", "medium", "large")
       case StoreInfoField.Contacts        => Seq("phoneNums", "email")
       case _                              => Seq.empty[String]
