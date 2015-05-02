@@ -22,14 +22,14 @@ sealed class StoreDatastore(val settings: StoreSettings)
   object Stores extends Stores
   object StoresByEmail extends StoresByEmail
 
-  def init()(implicit executor: ExecutionContext) {
+  def init(atMost: Duration = 5 seconds)(implicit executor: ExecutionContext) {
     val creation =
       for {
         _ <- Stores.create.future()
         _ <- StoresByEmail.create.future()
       } yield true
 
-    Await.ready(creation, 2 seconds)
+    Await.ready(creation, atMost)
   }
 
 

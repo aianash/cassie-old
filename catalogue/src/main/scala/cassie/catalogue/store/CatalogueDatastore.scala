@@ -24,14 +24,14 @@ sealed class CatalogueDatastore(val settings: CatalogueSettings)
   object CatalogueItemsByItemType extends CatalogueItemsByItemType(settings)
 
 
-  def init()(implicit executor: ExecutionContext) {
+  def init(atMost: Duration = 5 seconds)(implicit executor: ExecutionContext) {
     val creation =
       for {
         _ <- CatalogueItems.create.future()
         _ <- CatalogueItemsByItemType.create.future()
       } yield true
 
-    Await.ready(creation, 2 seconds)
+    Await.ready(creation, atMost)
   }
 
 

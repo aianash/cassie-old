@@ -3,6 +3,7 @@ package asterix.catalogue
 import scala.concurrent._, duration._
 import scala.collection.mutable.{Queue => MutableQueue, Map => MutableMap}
 import scala.util.{Sorting, Random}
+import scala.util.control.NonFatal
 
 import java.util.UUID
 
@@ -37,8 +38,8 @@ class CatalogueSupervisor(consumer: ActorRef) extends Actor with ActorLogging {
 
   store.init()
 
-  (0 until NrOfInjectors).foreach { _ =>
-    context.actorOf(CatalogueItemInjector.props(store, self))
+  (0 until NrOfInjectors).foreach { idx =>
+    context.actorOf(CatalogueItemInjector.props(store, self), "injector-" + idx)
   }
 
 
@@ -53,14 +54,26 @@ class CatalogueSupervisor(consumer: ActorRef) extends Actor with ActorLogging {
     case GetInjectionJob =>
       val injector = sender()
       requests += injector
-      if(jobSchedulingStatus.isCompleted) jobSchedulingStatus = scheduleNextJob
+      log.info(s"Injector at ${injector.path.toStringWithoutAddress} requested an injection job")
+      if(jobSchedulingStatus.isCompleted) {
+        log.info("Scheduling next job on request")
+        jobSchedulingStatus = scheduleNextJob
+        jobSchedulingStatus onSuccess { case _ =>
+          log.info("Successfully completed a schedule cycle")
+        }
+      }
 
 
     case CheckAndScheduleJob =>
-      if(jobSchedulingStatus.isCompleted && !requests.isEmpty) jobSchedulingStatus = scheduleNextJob
+      if(jobSchedulingStatus.isCompleted && !requests.isEmpty) {
+        log.info("Scheduling next job after check")
+        jobSchedulingStatus = scheduleNextJob
+        jobSchedulingStatus onSuccess { case _ =>
+          log.info("Successfully completed a schedule cycle")
+        }
+      }
 
-
-    case InjectionDone => injectors += (sender() -> None)
+    case InjectionDone(jobId) => injectors += (sender() -> None)
 
 
     case ErrorWhileInjection(item) => retryQueue += item
@@ -81,14 +94,17 @@ class CatalogueSupervisor(consumer: ActorRef) extends Actor with ActorLogging {
         backOffScheduling
         Future.successful(true)
       } else if(batch.isEmpty && requests.isEmpty) {
+        log.info("Emtpy batch and no requests therefore nothing to schedule")
         Future.successful(true)
       } else if(!batch.isEmpty && !requests.isEmpty) {
         val sendTo = requests.dequeue
         val job    = InjectionJob(InjectionJobId(Random.nextLong), batch)
         injectors += (sendTo -> job.some)
         sendTo ! ProcessJob(job)
+        log.info(s"Scheduled an injection job of ${batch.size} to injector at ${sendTo.path.toStringWithoutAddress}")
         scheduleNextJob
       } else {
+        log.info("No requests therefore adding batch to prefetch")
         batch.foreach(prefetched += _)
         Future.successful(true)
       }
@@ -101,6 +117,7 @@ class CatalogueSupervisor(consumer: ActorRef) extends Actor with ActorLogging {
     if(currentBackoffIter > InjectionBackoffLimit) currentBackoffIter = 0
     currentBackoffIter += 1
     val interval = (Math.pow(2, currentBackoffIter) - 1 ) / 2 * InjectionBackoffTime
+    log.info(s"Backing off before next job scheduling by $interval milliseconds")
     context.system.scheduler.scheduleOnce(interval milliseconds, self, CheckAndScheduleJob)
   }
 
@@ -108,14 +125,16 @@ class CatalogueSupervisor(consumer: ActorRef) extends Actor with ActorLogging {
   /**
    * Returns catalogue batch
    */
-  private def getCatalogueBatch = {
-
+  private def getCatalogueBatch =
     if(!prefetched.isEmpty) {
       val batch =
         (0 to Math.min(InjectionBatchSize, prefetched.length))
           .foldLeft (List.empty[SerializedCatalogueItem]) { (batch, _) =>
             prefetched.dequeue() :: batch
           }
+
+      log.info(s"Created a batch of ${batch.size} from prefetched items")
+
       Future.successful(batch)
     } else if(!retryQueue.isEmpty) {
       val batch =
@@ -123,12 +142,17 @@ class CatalogueSupervisor(consumer: ActorRef) extends Actor with ActorLogging {
           .foldLeft (List.empty[SerializedCatalogueItem]) { (batch, _) =>
             retryQueue.dequeue() :: batch
           }
+
+      log.info(s"Created a batch of ${batch.size} from retry queue")
+
       Future.successful(batch)
     } else {
       implicit val timeout = Timeout(ConsumerTimoutMs seconds)
-      (consumer ?= GetNextBatch(InjectionBatchSize)).map(_.batch)
+      val batchF = (consumer ?= GetNextBatch(InjectionBatchSize)).map(_.batch)
+      batchF onFailure { case NonFatal(ex) => log.error(ex, "Error while getting batch from kafka") }
+      batchF foreach { batch => log.info(s"Got batch of ${batch.size} items from kafka") }
+      batchF
     }
-  }
 
 }
 

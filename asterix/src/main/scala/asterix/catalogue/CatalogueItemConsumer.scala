@@ -46,9 +46,9 @@ class CatalogueItemConsumer(connector: ConsumerConnector) extends Actor with Act
   /**
    * Return next batch of catalogue items from kafka topic
    */
-  private def getNextBatch(batchSize: Int) = {
+  private def getNextBatch(batchSize: Int) =
     Try {
-      (0 until batchSize).foldLeft (List.empty[SerializedCatalogueItem]) { (batch, _) =>
+      (0 until batchSize).foldLeft(List.empty[SerializedCatalogueItem]) { (batch, _) =>
 
         Try({iterator.next().message}).map(_.some)
           .recover {
@@ -60,7 +60,7 @@ class CatalogueItemConsumer(connector: ConsumerConnector) extends Actor with Act
           }
       }
     }
-  }
+
 
 }
 
