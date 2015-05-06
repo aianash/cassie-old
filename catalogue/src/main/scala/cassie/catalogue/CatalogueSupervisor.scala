@@ -90,7 +90,7 @@ class CatalogueSupervisor extends Actor with ActorLogging {
       // Which could be because of no entry in database
       // or some error caught while fetching (handled above)
       itemsF foreach { items =>
-        implicit val ordering = Ordering[(Long, Long)].on({ x: CatalogueItemId => (x.storeId.stuid, x.cuid)})
+        implicit val ordering = Ordering[(Long, Long)].on({ x: CatalogueItemId => (x.storeId.stuid, x.cuid) })
         if(items.size != itemIds.size) {
           val fetchedItemIds = Sorting.stableSort(items.map(_.itemId))
           val givenItemIds   = Sorting.stableSort(itemIds)

@@ -11,7 +11,7 @@ trait Libraries {
     val scala           = "2.10.4"
     val lucene          = "4.8.0"
     val akka            = "2.3.6"
-    val scalaz          = "7.0.6"
+    val scalaz          = "7.1.1"
     val graphstream     = "1.2"
     val fastutil        = "6.5.15"
     val argonaut        = "6.0.4"
