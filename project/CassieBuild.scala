@@ -39,6 +39,7 @@ object CassieBuild extends Build with Libraries {
       "twitter-repo" at "http://maven.twttr.com",
       "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
       "websudos-repo" at "http://maven.websudos.co.uk/ext-release-local",
+      Resolver.bintrayRepo("websudos", "oss-releases"),
       "Local Maven Repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository"
     ),
 
