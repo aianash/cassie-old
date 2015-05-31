@@ -38,6 +38,7 @@ object CassieBuild extends Build with Libraries {
       "Spray Repository" at "http://repo.spray.io/",
       "twitter-repo" at "http://maven.twttr.com",
       "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
+      "websudos-repo" at "http://maven.websudos.co.uk/ext-release-local",
       "Local Maven Repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository"
     ),
 
