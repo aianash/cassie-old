@@ -24,14 +24,14 @@ sealed class CatalogueDatastore(val settings: CatalogueSettings)
   object CatalogueItemsByItemType extends CatalogueItemsByItemType(settings)
 
 
-  def init()(implicit executor: ExecutionContext) {
+  def init(atMost: Duration = 5 seconds)(implicit executor: ExecutionContext) {
     val creation =
       for {
         _ <- CatalogueItems.create.future()
         _ <- CatalogueItemsByItemType.create.future()
       } yield true
 
-    Await.ready(creation, 2 seconds)
+    Await.ready(creation, atMost)
   }
 
 
@@ -51,12 +51,14 @@ sealed class CatalogueDatastore(val settings: CatalogueSettings)
     CatalogueItems.getCatalogueItemBy(itemId).one()
 
 
-  def insertCatalogueItems(items: Seq[CatalogueItem])(implicit executor: ExecutionContext) = {
+  def insertCatalogueItems(items: Seq[SerializedCatalogueItem])(implicit executor: ExecutionContext) = {
     val batch = BatchStatement()
 
     items.foreach { item =>
-      batch add CatalogueItems.insertCatalogueItem(item)
-      batch add CatalogueItemsByItemType.insertCatalogueItem(item)
+      CatalogueItem.decode(item).foreach { decoded =>
+        batch add CatalogueItems.insertCatalogueItem(item)
+        batch add CatalogueItemsByItemType.insertCatalogueItem(decoded.itemType, item)
+      }
     }
 
     batch.future().map(_ => true)

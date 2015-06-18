@@ -22,14 +22,14 @@ sealed class StoreDatastore(val settings: StoreSettings)
   object Stores extends Stores
   object StoresByEmail extends StoresByEmail
 
-  def init()(implicit executor: ExecutionContext) {
+  def init(atMost: Duration = 5 seconds)(implicit executor: ExecutionContext) {
     val creation =
       for {
         _ <- Stores.create.future()
         _ <- StoresByEmail.create.future()
       } yield true
 
-    Await.ready(creation, 2 seconds)
+    Await.ready(creation, atMost)
   }
 
 
@@ -53,4 +53,8 @@ sealed class StoreDatastore(val settings: StoreSettings)
   def getStore(storeId: StoreId, fields: Seq[StoreInfoField])(implicit executor: ExecutionContext) =
     Stores.getStoreBy(storeId, fields).one()
 
+
+  // Improve this api
+  def getStores(storeIds: Seq[StoreId], fields: Seq[StoreInfoField])(implicit executor: ExecutionContext) =
+    Future.sequence(storeIds.map(getStore(_, fields))).map(_.flatMap(x => x))
 }

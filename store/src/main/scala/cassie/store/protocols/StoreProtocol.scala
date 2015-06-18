@@ -17,3 +17,6 @@ case class UpdateStore(storeId: StoreId, info: StoreInfo)
 
 case class GetStore(storeId: StoreId, fields: Seq[StoreInfoField])
   extends StoreMessages with Replyable[Store]
+
+case class GetStores(storeIds: Seq[StoreId], fields: Seq[StoreInfoField])
+  extends StoreMessages with Replyable[Seq[Store]]

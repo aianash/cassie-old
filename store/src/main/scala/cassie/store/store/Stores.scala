@@ -17,6 +17,8 @@ import com.websudos.phantom.query.SelectQuery
 
 import com.datastax.driver.core.querybuilder.QueryBuilder
 
+import goshoplane.commons.core.factories._
+
 class Stores extends CassandraTable[Stores, Store] {
 
   override def tableName = "stores"
@@ -49,48 +51,50 @@ class Stores extends CassandraTable[Stores, Store] {
 
 
   override def fromRow(row: Row) = {
-    // creating address
-    val gpsLoc = for(lat <- lat(row); lng <- lng(row)) yield GPSLocation(lat, lng)
-    var addressO = gpsLoc.map(v => PostalAddress(gpsLoc = v.some))
-    addressO = addressTitle(row).map {t => addressO.getOrElse(PostalAddress()).copy(title   =  t.some) }
-    addressO = addressShort(row).map {s => addressO.getOrElse(PostalAddress()).copy(short   =  s.some) }
-    addressO = addressFull(row) .map {f => addressO.getOrElse(PostalAddress()).copy(full    =  f.some) }
-    addressO = pincode(row)     .map {p => addressO.getOrElse(PostalAddress()).copy(pincode =  p.some) }
-    addressO = country(row)     .map {c => addressO.getOrElse(PostalAddress()).copy(country =  c.some) }
-    addressO = city(row)        .map {c => addressO.getOrElse(PostalAddress()).copy(city    =  c.some) }
+    val gpsLoc   = for(lat <- lat(row); lng <- lng(row)) yield GPSLocation(lat, lng)
+    var addressO =
+      Common.address( gpsLoc,
+                      addressTitle(row),
+                      addressShort(row),
+                      addressFull(row),
+                      pincode(row),
+                      country(row),
+                      city(row))
 
-    var storeNameO = StoreName().some
-    storeNameO = fullname(row).flatMap(f => storeNameO.map(_.copy(full = f.some))) orElse storeNameO
-    storeNameO = handle(row)  .flatMap(h => storeNameO.map(_.copy(handle = h.some))) orElse storeNameO
-
-    var nameO  = fullname(row).flatMap(f => StoreName(full = f.some).some)
-    nameO = handle(row).flatMap(h => nameO.map(_.copy(handle = h.some))) orElse nameO
-
-
+    var storeNameO = Common.storeName(fullname(row), handle(row))
+    val avatarO    = Common.storeAvatar(small(row), medium(row), large(row))
+    val phoneO     = Common.phoneContact(phoneNums(row).toSeq)
     val itemTypesO = itemTypes(row).flatMap(ItemType.valueOf(_)).toSeq.some
-    val avatarO = StoreAvatar(small = small(row), medium = medium(row), large = large(row)).some
-    val phoneO  = PhoneContact(phoneNums(row).toSeq).some
+
 
     Store(
       storeId   = StoreId(stuid = stuid(row)),
       storeType = StoreType.valueOf(storeType(row)).getOrElse(StoreType.Unknown),
-      info      = StoreInfo(
-        name      = nameO,
-        itemTypes = itemTypesO,
-        address   = addressO,
-        avatar    = avatarO,
-        email     = email(row),
-        phone     = phoneO
-      )
+      info      = Common.storeInfo(storeNameO, itemTypesO, addressO, avatarO, email(row), phoneO).getOrElse(StoreInfo())
     )
   }
 
 
   def insertStore(store: Store) =
     insert
-      .value(_.stuid, store.storeId.stuid)
-      .value(_.storeType, store.storeType.name)
-      .value(_.fullname, store.info.name.flatMap(_.full))
+      .value(_.stuid,         store.storeId.stuid)
+      .value(_.storeType,     store.storeType.name)
+      .value(_.fullname,      store.info.name.flatMap(_.full))
+      .value(_.handle,        store.info.name.flatMap(_.handle))
+      .value(_.itemTypes,     store.info.itemTypes.map(_.map(_.name).toSet).getOrElse(Set.empty[String]))
+      .value(_.lat,           store.info.address.flatMap(_.gpsLoc.map(_.lat)))
+      .value(_.lng,           store.info.address.flatMap(_.gpsLoc.map(_.lng)))
+      .value(_.addressTitle,  store.info.address.flatMap(_.title))
+      .value(_.addressShort,  store.info.address.flatMap(_.short))
+      .value(_.addressFull,   store.info.address.flatMap(_.full))
+      .value(_.pincode,       store.info.address.flatMap(_.pincode))
+      .value(_.country,       store.info.address.flatMap(_.country))
+      .value(_.city,          store.info.address.flatMap(_.city))
+      .value(_.small,         store.info.avatar.flatMap(_.small))
+      .value(_.medium,        store.info.avatar.flatMap(_.medium))
+      .value(_.large,         store.info.avatar.flatMap(_.large))
+      .value(_.email,         store.info.email)
+      .value(_.phoneNums,     store.info.phone.map(_.numbers.toSet).getOrElse(Set.empty[String]))
 
 
   def getStoreBy(storeId: StoreId, fields: Seq[StoreInfoField]) = {
@@ -107,10 +111,10 @@ class Stores extends CassandraTable[Stores, Store] {
     fields.flatMap {
       case StoreInfoField.Name            => Seq("fullname", "handle")
       case StoreInfoField.ItemTypes       => Seq("itemTypes")
-      case StoreInfoField.Address         => Seq("lat", "lng", "addressTitle", "addressShort", "pincode", "country", "city")
+      case StoreInfoField.Address         => Seq("lat", "lng", "addressTitle", "addressShort", "addressFull", "pincode", "country", "city")
       case StoreInfoField.Avatar          => Seq("small", "medium", "large")
       case StoreInfoField.Contacts        => Seq("phoneNums", "email")
-      case _                                  => Seq.empty[String]
+      case _                              => Seq.empty[String]
     } ++ Seq("stuid", "storeType")
   }
 

@@ -49,6 +49,8 @@ class CassieService(implicit inj: Injector) extends Cassie[TwitterFuture] {
 
   private val Catalogue = system.actorOf(CatalogueSupervisor.props)
   private val Store     = system.actorOf(StoreSupervisor.props)
+
+
   ////////////////////
   // Catalogue APIs //
   ////////////////////
@@ -57,7 +59,12 @@ class CassieService(implicit inj: Injector) extends Cassie[TwitterFuture] {
     val itemsF = Catalogue ?= GetStoreCatalogue(storeId)
 
     awaitResult(itemsF, 500 milliseconds, {
-      case NonFatal(ex) => TFailure(CassieException("Error while creating user"))
+      case NonFatal(ex) =>
+        val statement = s"Error while getting store's catalogue items for" +
+                        s" store id ${storeId.stuid}"
+
+        log.error(ex, statement)
+        TFailure(CassieException(statement))
     })
   }
 
@@ -66,7 +73,12 @@ class CassieService(implicit inj: Injector) extends Cassie[TwitterFuture] {
     val itemsF = Catalogue ?= GetStoreCatalogueForTypes(storeId, itemTypes)
 
     awaitResult(itemsF, 500 milliseconds, {
-      case NonFatal(ex) => TFailure(CassieException("Error while creating user"))
+      case NonFatal(ex) =>
+        val statement = s"Error while getting store's catalogue items for store id ${storeId.stuid} and type " +
+                        s" and itemTypes = " + itemTypes.mkString(", ")
+
+        log.error(ex, statement)
+        TFailure(CassieException(statement))
     })
   }
 
@@ -75,7 +87,12 @@ class CassieService(implicit inj: Injector) extends Cassie[TwitterFuture] {
     val itemsF = Catalogue ?= GetCatalogueItems(itemIds)
 
     awaitResult(itemsF, 500 milliseconds, {
-      case NonFatal(ex) => TFailure(CassieException("Error while creating user"))
+      case NonFatal(ex) =>
+        val statement = s"Error while getting catalogue items for catalogue items id = " +
+                        itemIds.map(id => s"{id.storeId.stuid}.{id.cuid}").mkString(", ")
+
+        log.error(ex, statement)
+        TFailure(CassieException(statement))
     })
   }
 
@@ -98,7 +115,12 @@ class CassieService(implicit inj: Injector) extends Cassie[TwitterFuture] {
       }
 
     awaitResult(storeIdF, 500 milliseconds, {
-      case NonFatal(ex) => TFailure(CassieException("Error creating/updating store"))
+      case NonFatal(ex) =>
+        val statement = s"Error while creating or updating store " +
+                        s" for storeType = ${storeType}"
+
+        log.error(ex, statement)
+        TFailure(CassieException(statement))
     })
   }
 
@@ -107,7 +129,28 @@ class CassieService(implicit inj: Injector) extends Cassie[TwitterFuture] {
     val storeF = Store ?= GetStore(storeId, fields)
 
     awaitResult(storeF, 500 milliseconds, {
-      case NonFatal(ex) => TFailure(CassieException("Error getting store info"))
+      case NonFatal(ex) =>
+        val statement = s"Error while getting store detail for " +
+                        s" storeId = ${storeId.stuid}" +
+                        s" and fields = " + fields.mkString(", ")
+
+        log.error(ex, statement)
+        TFailure(CassieException(statement))
+    })
+  }
+
+
+  def getStores(storeIds: Seq[StoreId], fields: Seq[StoreInfoField]) = {
+    val storesF = Store ?= GetStores(storeIds, fields)
+
+    awaitResult(storesF, 500 milliseconds, {
+      case NonFatal(ex) =>
+        val statement = s"Error while get stores' infos for " +
+                        s"storeIds = " + storeIds.map(_.stuid).mkString(", ") +
+                        s" and fields = " + fields.mkString(", ")
+
+        log.error(ex, statement)
+        TFailure(CassieException(statement))
     })
   }
 

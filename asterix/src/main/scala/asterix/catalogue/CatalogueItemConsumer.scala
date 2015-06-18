@@ -12,6 +12,10 @@ import kafka.serializer.StringDecoder
 import goshoplane.commons.catalogue.CatalogueItem
 import goshoplane.commons.catalogue.kafka.serializers.SerializedCatalogueItemDecoder
 
+import com.goshoplane.common._
+
+import scalaz._, Scalaz._
+
 
 class CatalogueItemConsumer(connector: ConsumerConnector) extends Actor with ActorLogging {
 
@@ -33,7 +37,7 @@ class CatalogueItemConsumer(connector: ConsumerConnector) extends Actor with Act
         case Success(batch) => replyTo ! CatalogueItemBatch(batch = batch)
         case Failure(ex)    =>
           log.error(ex, "Error while getting next catalogue batch")
-          replyTo ! CatalogueItemBatch(batch = List.empty[CatalogueItem])
+          replyTo ! CatalogueItemBatch(batch = List.empty[SerializedCatalogueItem])
       }
   }
 
@@ -42,12 +46,11 @@ class CatalogueItemConsumer(connector: ConsumerConnector) extends Actor with Act
   /**
    * Return next batch of catalogue items from kafka topic
    */
-  private def getNextBatch(batchSize: Int) = {
+  private def getNextBatch(batchSize: Int) =
     Try {
-      (0 until batchSize).foldLeft (List.empty[CatalogueItem]) { (batch, _) =>
+      (0 until batchSize).foldLeft(List.empty[SerializedCatalogueItem]) { (batch, _) =>
 
-        Try {iterator.next().message}
-          .map(CatalogueItem.decode(_))
+        Try({iterator.next().message}).map(_.some)
           .recover {
             case _: ConsumerTimeoutException => None
           } match {
@@ -57,7 +60,7 @@ class CatalogueItemConsumer(connector: ConsumerConnector) extends Actor with Act
           }
       }
     }
-  }
+
 
 }
 
