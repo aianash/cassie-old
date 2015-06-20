@@ -9,17 +9,20 @@ import com.typesafe.sbt.packager.archetypes.JavaAppPackaging
 import com.typesafe.sbt.SbtScalariform
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 
-// import com.typesafe.sbt.SbtStartScript
-
 import sbtassembly.AssemblyPlugin.autoImport._
 
 import com.twitter.scrooge.ScroogeSBT
 
 import com.typesafe.sbt.SbtNativePackager._, autoImport._
-import com.typesafe.sbt.packager.Keys._
+import com.typesafe.sbt.packager.Keys.{executableScriptName => _, _}
 import com.typesafe.sbt.packager.docker.{Cmd, ExecCmd, CmdLike}
 
 object CassieBuild extends Build with Libraries {
+
+  // makeScript task is used to create a linked scripts
+  // while development
+  lazy val makeScript = TaskKey[Unit]("make-script", "make script in local directory to run main classes")
+
   def sharedSettings = Seq(
     organization := "com.goshoplane",
     version := "0.0.1",
@@ -32,13 +35,14 @@ object CassieBuild extends Build with Libraries {
     javaOptions += "-Xmx2500M",
 
     resolvers ++= Seq(
-      // "ReaderDeck Releases" at "http://repo.readerdeck.com/artifactory/readerdeck-releases",
       "anormcypher" at "http://repo.anormcypher.org/",
       "Akka Repository" at "http://repo.akka.io/releases",
       "Spray Repository" at "http://repo.spray.io/",
       "twitter-repo" at "http://maven.twttr.com",
       "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
-      "websudos-repo" at "http://maven.websudos.co.uk/ext-release-local",
+      // This repo is not really working, so commented
+      // "Websudos releases"      at "http://maven.websudos.co.uk/ext-release-local",
+      // "Websudos snapshots"     at "http://maven.websudos.co.uk/ext-snapshot-local",
       Resolver.bintrayRepo("websudos", "oss-releases"),
       "Local Maven Repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository"
     ),
@@ -58,7 +62,6 @@ object CassieBuild extends Build with Libraries {
     base = file("core"),
     settings = Project.defaultSettings ++
       sharedSettings
-      // SbtStartScript.startScriptForClassesSettings
   ).settings(
     name := "cassie-core",
 
@@ -78,7 +81,6 @@ object CassieBuild extends Build with Libraries {
     base = file("store"),
     settings = Project.defaultSettings ++
       sharedSettings
-      // SbtStartScript.startScriptForClassesSettings
   ).settings(
     name := "cassie-store",
 
@@ -97,7 +99,6 @@ object CassieBuild extends Build with Libraries {
     base = file("catalogue"),
     settings = Project.defaultSettings ++
       sharedSettings
-      // SbtStartScript.startScriptForClassesSettings
   ).settings(
     name := "cassie-catalogue",
 
@@ -123,15 +124,39 @@ object CassieBuild extends Build with Libraries {
     base = file("asterix"),
     settings = Project.defaultSettings ++
       sharedSettings
-      // SbtStartScript.startScriptForClassesSettings
-  ).settings(
+  ).enablePlugins(JavaAppPackaging)
+  .settings(
     name := "cassie-asterix",
 
+    // This doesnt seem to affect docker:publishLocal, only assembly command
     assemblyMergeStrategy in assembly := {
       case PathList(ps @ _*) if ps.last endsWith ".txt.1" => MergeStrategy.first
       case x =>
         val oldStrategy = (assemblyMergeStrategy in assembly).value
         oldStrategy(x)
+    },
+
+    dockerExposedPorts := Seq(4848),
+    // TODO: remove echo statement once verified
+    dockerEntrypoint := Seq("sh", "-c", "bin/cassie-asterix $*"),
+    dockerRepository := Some("docker"),
+    dockerBaseImage := "phusion/baseimage",
+    dockerCommands ++= Seq(
+      Cmd("USER", "root"),
+      new CmdLike {
+        def makeContent = """|RUN \
+                             |  echo oracle-java7-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
+                             |  add-apt-repository -y ppa:webupd8team/java && \
+                             |  apt-get update && \
+                             |  apt-get install -y oracle-java7-installer && \
+                             |  rm -rf /var/lib/apt/lists/* && \
+                             |  rm -rf /var/cache/oracle-jdk7-installer""".stripMargin
+      }
+    ),
+
+    makeScript <<= (stage in Universal, stagingDirectory in Universal, baseDirectory in ThisBuild, streams) map { (_, dir, cwd, streams) =>
+      var path = dir / "bin" / "cassie-asterix"
+      sbt.Process(Seq("ln", "-sf", path.toString, "cassie-asterix"), cwd) ! streams.log
     },
 
     libraryDependencies ++= Seq(
@@ -154,11 +179,15 @@ object CassieBuild extends Build with Libraries {
     base = file("service"),
     settings = Project.defaultSettings ++
       sharedSettings
-      // SbtStartScript.startScriptForClassesSettings
   ).enablePlugins(JavaAppPackaging)
   .settings(
     name := "cassie-service",
     mainClass in Compile := Some("cassie.service.CassieServer"),
+
+    makeScript <<= (stage in Universal, stagingDirectory in Universal, baseDirectory in ThisBuild, streams) map { (_, dir, cwd, streams) =>
+      var path = dir / "bin" / "cassie-service"
+      sbt.Process(Seq("ln", "-sf", path.toString, "cassie-service"), cwd) ! streams.log
+    },
 
     dockerExposedPorts := Seq(4848),
     // TODO: remove echo statement once verified
@@ -177,6 +206,7 @@ object CassieBuild extends Build with Libraries {
                              |  rm -rf /var/cache/oracle-jdk7-installer""".stripMargin
       }
     ),
+
     assemblyMergeStrategy in assembly := {
       case PathList(ps @ _*) if ps.last endsWith ".txt.1" => MergeStrategy.first
       case x =>
