@@ -3,65 +3,84 @@ package cassie.catalogue.store
 import scala.concurrent.{Future, Await, ExecutionContext}
 import scala.concurrent.duration._
 
+import java.nio.ByteBuffer
+
 import scalaz._, Scalaz._
 import scalaz.std.option._
 import scalaz.syntax.monad._
 
+import com.websudos.phantom.dsl._
+
 import cassie.catalogue.CatalogueSettings
 
-import com.goshoplane.common._
-
-import goshoplane.commons.catalogue._
-
-import com.websudos.phantom.Implicits.{context => _, _} // donot import execution context
+import commons.catalogue._, collection._
 
 
 
-sealed class CatalogueDatastore(val settings: CatalogueSettings)
-  extends CatalogueConnector {
+sealed class CatalogueDatastore(val settings: CatalogueSettings) extends CatalogueConnector {
 
-  object CatalogueItems extends CatalogueItems(settings)
-  object CatalogueItemsByItemType extends CatalogueItemsByItemType(settings)
+  object BrandCatalogueItems extends ConcreteBrandCatalogueItems(settings)
+  object StoreCatalogueItems extends ConcreteStoreCatalogueItems(settings)
 
 
-  def init(atMost: Duration = 5 seconds)(implicit executor: ExecutionContext) {
+  def init(): Boolean = {
     val creation =
       for {
-        _ <- CatalogueItems.create.future()
-        _ <- CatalogueItemsByItemType.create.future()
+        _ <- BrandCatalogueItems.create.ifNotExists.future()
+        _ <- StoreCatalogueItems.create.ifNotExists.future()
       } yield true
 
-    Await.ready(creation, atMost)
+    Await.result(creation, 2 seconds)
   }
 
-
-  def getStoreCatalogue(storeId: StoreId)(implicit executor: ExecutionContext) =
-    CatalogueItems.getCatalogueItemsBy(storeId).fetch()
-
-
-  def getStoreCatalogueForType(storeId: StoreId, itemTypes: Seq[ItemType])(implicit executor: ExecutionContext) =
-    CatalogueItemsByItemType.getCatalogueItemsBy(storeId, itemTypes).fetch()
-
-
-  def getCatalogueItems(storeId: StoreId, itemIds: Seq[CatalogueItemId])(implicit executor: ExecutionContext) =
-    CatalogueItems.getCatalogueItemsBy(storeId, itemIds).fetch()
-
-
-  def getCatalogueItem(itemId: CatalogueItemId)(implicit executor: ExecutionContext) =
-    CatalogueItems.getCatalogueItemBy(itemId).one()
-
-
-  def insertCatalogueItems(items: Seq[SerializedCatalogueItem])(implicit executor: ExecutionContext) = {
-    val batch = BatchStatement()
-
-    items.foreach { item =>
-      CatalogueItem.decode(item).foreach { decoded =>
-        batch add CatalogueItems.insertCatalogueItem(item)
-        batch add CatalogueItemsByItemType.insertCatalogueItem(decoded.itemType, item)
+  def insertStoreCatalogueItems(items: Seq[CatalogueItem]): Future[Boolean] = {
+    val batch =
+      items.foldLeft (Batch.logged) { (b, i) =>
+        b.add(BrandCatalogueItems.insetBrandCatalogueItem(i.itemId, ByteBuffer.wrap(CatalogueItem.brandBinary(i))))
+         .add(StoreCatalogueItems.insetStoreCatalogueItem(i.itemId, i.ownerId.asInstanceOf[StoreId], CatalogueItem.storeBinary(i).map(ByteBuffer.wrap(_)).get))
       }
+    batch.future().map(_ => true)
+  }
+
+  def insertBrandCatalogueItems(items: Seq[CatalogueItem]): Future[Boolean] = {
+    val batch =
+      items.foldLeft (Batch.logged) { (b, i) =>
+        b.add(BrandCatalogueItems.insetBrandCatalogueItem(i.itemId, ByteBuffer.wrap(CatalogueItem.brandBinary(i))))
+      }
+    batch.future().map(_ => true)
+  }
+
+  def getBrandCatalogueItems(itemIds: Seq[CatalogueItemId]): Future[CatalogueItems] = {
+    val itemsF = BrandCatalogueItems.getBrandCatalogueItemsFor(itemIds).fetch()
+    itemsF map { items =>
+      val catalogueItems = items map { it2 =>
+        val bytes = byteBufferToByteArray(it2._2)
+        CatalogueItem(bytes)
+      }
+      CatalogueItems(catalogueItems)
+    }
+  }
+
+  def getStoreCatalogueItems(keys: Seq[(CatalogueItemId, StoreId)]): Future[CatalogueItems] =
+    (for {
+      brandItems <- BrandCatalogueItems.getBrandCatalogueItemsFor(keys.map(_._1)).fetch()
+      storeItems <- StoreCatalogueItems.getStoreCatalogueItemsFor(keys).fetch() if brandItems.nonEmpty
+    } yield {
+      val id2brandItem = brandItems.toMap
+      val catalogueItems = storeItems flatMap { storeItem =>
+        id2brandItem.get(storeItem._1).map { x =>
+          CatalogueItem(byteBufferToByteArray(storeItem._3), CatalogueItem(byteBufferToByteArray(x)))
+        }
+      }
+      CatalogueItems(catalogueItems)
+    }) recoverWith {
+      case _: NoSuchElementException => Future.successful(CatalogueItems(Seq.empty[CatalogueItem]))
     }
 
-    batch.future().map(_ => true)
+  private def byteBufferToByteArray(buf: ByteBuffer) = {
+    val bytes = Array.ofDim[Byte](buf.remaining)
+    buf.get(bytes)
+    bytes
   }
 
 }

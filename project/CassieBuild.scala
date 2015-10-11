@@ -19,7 +19,12 @@ import com.typesafe.sbt.SbtNativePackager._, autoImport._
 import com.typesafe.sbt.packager.Keys._
 import com.typesafe.sbt.packager.docker.{Cmd, ExecCmd, CmdLike}
 
-object CassieBuild extends Build with Libraries {
+import com.goshoplane.sbt.standard.libraries.StandardLibraries
+
+object CassieBuild extends Build with StandardLibraries {
+
+  lazy val makeScript = TaskKey[Unit]("make-script", "make script in local directory to run main classes")
+
   def sharedSettings = Seq(
     organization := "com.goshoplane",
     version := "0.0.1",
@@ -31,17 +36,7 @@ object CassieBuild extends Build with Libraries {
     fork := true,
     javaOptions += "-Xmx2500M",
 
-    resolvers ++= Seq(
-      // "ReaderDeck Releases" at "http://repo.readerdeck.com/artifactory/readerdeck-releases",
-      "anormcypher" at "http://repo.anormcypher.org/",
-      "Akka Repository" at "http://repo.akka.io/releases",
-      "Spray Repository" at "http://repo.spray.io/",
-      "twitter-repo" at "http://maven.twttr.com",
-      "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
-      "websudos-repo" at "http://maven.websudos.co.uk/ext-release-local",
-      Resolver.bintrayRepo("websudos", "oss-releases"),
-      "Local Maven Repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository"
-    ),
+    resolvers ++= StandardResolvers,
 
     publishMavenStyle := true
   ) ++ net.virtualvoid.sbt.graph.Plugin.graphSettings
@@ -64,12 +59,8 @@ object CassieBuild extends Build with Libraries {
 
     libraryDependencies ++= Seq(
     ) ++ Libs.scalaz
-      ++ Libs.scroogeCore
-      ++ Libs.finagleThrift
-      ++ Libs.libThrift
       ++ Libs.akka
       ++ Libs.scaldi
-      ++ Libs.msgpack
   )
 
 
@@ -88,7 +79,7 @@ object CassieBuild extends Build with Libraries {
       ++ Libs.logback
       ++ Libs.phantom
       ++ Libs.playJson
-      ++ Libs.catalogueCommons
+      ++ Libs.commonsCatalogue
   ).dependsOn(core)
 
 
@@ -98,7 +89,8 @@ object CassieBuild extends Build with Libraries {
     settings = Project.defaultSettings ++
       sharedSettings
       // SbtStartScript.startScriptForClassesSettings
-  ).settings(
+  ).enablePlugins(JavaAppPackaging)
+  .settings(
     name := "cassie-catalogue",
 
     assemblyMergeStrategy in assembly := {
@@ -114,7 +106,12 @@ object CassieBuild extends Build with Libraries {
       ++ Libs.logback
       ++ Libs.phantom
       ++ Libs.playJson
-      ++ Libs.catalogueCommons
+      ++ Libs.commonsCatalogue,
+
+    makeScript <<= (stage in Universal, stagingDirectory in Universal, baseDirectory in ThisBuild, streams) map { (_, dir, cwd, streams) =>
+      var path = dir / "bin" / "cassie-catalogue"
+      sbt.Process(Seq("ln", "-sf", path.toString, "cassie-catalogue"), cwd) ! streams.log
+    }
   ).dependsOn(core)
 
 
@@ -138,14 +135,11 @@ object CassieBuild extends Build with Libraries {
     ) ++ Libs.akka
       ++ Libs.slf4j
       ++ Libs.logback
-      ++ Libs.finagleCore
-      ++ Libs.mimepull
       ++ Libs.scaldi
       ++ Libs.scaldiAkka
       ++ Libs.bijection
       ++ Libs.kafka
-      ++ Libs.msgpack
-      ++ Libs.catalogueCommons
+      ++ Libs.commonsCatalogue
   ).dependsOn(core, catalogue, store)
 
 
@@ -188,12 +182,9 @@ object CassieBuild extends Build with Libraries {
     ) ++ Libs.akka
       ++ Libs.slf4j
       ++ Libs.logback
-      ++ Libs.finagleCore
-      ++ Libs.mimepull
       ++ Libs.scaldi
       ++ Libs.scaldiAkka
       ++ Libs.bijection
-      ++ Libs.msgpack
   ).dependsOn(core, catalogue, store)
 
 

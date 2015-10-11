@@ -8,6 +8,8 @@ resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositor
 
 resolvers += "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/"
 
+resolvers += "Local Maven Repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository"
+
 resolvers += "twitter-repo" at "http://maven.twttr.com"
 
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.13.0")
@@ -23,5 +25,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-scalariform" % "1.3.0")
 addSbtPlugin("com.twitter" %% "scrooge-sbt-plugin" % "3.15.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.0.2")
+
+addSbtPlugin("com.goshoplane" % "sbt-standard-libraries" % "0.1.2")
 
 scalaVersion := "2.10.4"

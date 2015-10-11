@@ -1,19 +1,12 @@
 package cassie.catalogue.protocols
 
-import com.goshoplane.common._
-
 import goshoplane.commons.core.protocols.Replyable
 
-import goshoplane.commons.catalogue.CatalogueItem
+import commons.catalogue._, collection._
 
 sealed trait CatalogueMessages
 
-case class GetStoreCatalogue(storeId: StoreId)
-  extends CatalogueMessages with Replyable[Seq[SerializedCatalogueItem]]
-
-case class GetStoreCatalogueForTypes(storeId: StoreId, itemTypes: Seq[ItemType])
-  extends CatalogueMessages with Replyable[Seq[SerializedCatalogueItem]]
-
-case class GetCatalogueItems(itemIds: Seq[CatalogueItemId])
-  extends CatalogueMessages with Replyable[Seq[SerializedCatalogueItem]]
-
+case class InsertStoreCatalogueItem(items: Seq[CatalogueItem]) extends CatalogueMessages with Replyable[Boolean]
+case class InsertBrandCatalogueItem(items: Seq[CatalogueItem]) extends CatalogueMessages with Replyable[Boolean]
+case class GetBrandCatalogueItems(ids: Seq[CatalogueItemId]) extends CatalogueMessages with Replyable[CatalogueItems]
+case class GetStoreCatalogueItems(keys: Seq[(CatalogueItemId, StoreId)]) extends CatalogueMessages with Replyable[CatalogueItems]
