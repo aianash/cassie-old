@@ -45,7 +45,7 @@ object CassieBuild extends Build with StandardLibraries {
     id = "cassie",
     base = file("."),
     settings = Project.defaultSettings
-  ).aggregate(core, service, catalogue, store, asterix)
+  ).aggregate(core, service, catalogue)
 
 
   lazy val core = Project(
@@ -62,25 +62,6 @@ object CassieBuild extends Build with StandardLibraries {
       ++ Libs.akka
       ++ Libs.scaldi
   )
-
-
-  lazy val store = Project(
-    id = "cassie-store",
-    base = file("store"),
-    settings = Project.defaultSettings ++
-      sharedSettings
-      // SbtStartScript.startScriptForClassesSettings
-  ).settings(
-    name := "cassie-store",
-
-    libraryDependencies ++= Seq(
-    ) ++ Libs.akka
-      ++ Libs.slf4j
-      ++ Libs.logback
-      ++ Libs.phantom
-      ++ Libs.playJson
-      ++ Libs.commonsCatalogue
-  ).dependsOn(core)
 
 
   lazy val catalogue = Project(
@@ -113,34 +94,6 @@ object CassieBuild extends Build with StandardLibraries {
       sbt.Process(Seq("ln", "-sf", path.toString, "cassie-catalogue"), cwd) ! streams.log
     }
   ).dependsOn(core)
-
-
-  lazy val asterix = Project(
-    id = "cassie-asterix",
-    base = file("asterix"),
-    settings = Project.defaultSettings ++
-      sharedSettings
-      // SbtStartScript.startScriptForClassesSettings
-  ).settings(
-    name := "cassie-asterix",
-
-    assemblyMergeStrategy in assembly := {
-      case PathList(ps @ _*) if ps.last endsWith ".txt.1" => MergeStrategy.first
-      case x =>
-        val oldStrategy = (assemblyMergeStrategy in assembly).value
-        oldStrategy(x)
-    },
-
-    libraryDependencies ++= Seq(
-    ) ++ Libs.akka
-      ++ Libs.slf4j
-      ++ Libs.logback
-      ++ Libs.scaldi
-      ++ Libs.scaldiAkka
-      ++ Libs.bijection
-      ++ Libs.kafka
-      ++ Libs.commonsCatalogue
-  ).dependsOn(core, catalogue, store)
 
 
   lazy val service = Project(
@@ -185,7 +138,7 @@ object CassieBuild extends Build with StandardLibraries {
       ++ Libs.scaldi
       ++ Libs.scaldiAkka
       ++ Libs.bijection
-  ).dependsOn(core, catalogue, store)
+  ).dependsOn(core, catalogue)
 
 
 }
