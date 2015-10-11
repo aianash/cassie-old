@@ -70,8 +70,7 @@ object CassieBuild extends Build with StandardLibraries {
     settings = Project.defaultSettings ++
       sharedSettings
       // SbtStartScript.startScriptForClassesSettings
-  ).enablePlugins(JavaAppPackaging)
-  .settings(
+  ).settings(
     name := "cassie-catalogue",
 
     assemblyMergeStrategy in assembly := {
@@ -87,12 +86,7 @@ object CassieBuild extends Build with StandardLibraries {
       ++ Libs.logback
       ++ Libs.phantom
       ++ Libs.playJson
-      ++ Libs.commonsCatalogue,
-
-    makeScript <<= (stage in Universal, stagingDirectory in Universal, baseDirectory in ThisBuild, streams) map { (_, dir, cwd, streams) =>
-      var path = dir / "bin" / "cassie-catalogue"
-      sbt.Process(Seq("ln", "-sf", path.toString, "cassie-catalogue"), cwd) ! streams.log
-    }
+      ++ Libs.commonsCatalogue
   ).dependsOn(core)
 
 
@@ -132,12 +126,11 @@ object CassieBuild extends Build with StandardLibraries {
     },
 
     libraryDependencies ++= Seq(
-    ) ++ Libs.akka
-      ++ Libs.slf4j
-      ++ Libs.logback
-      ++ Libs.scaldi
-      ++ Libs.scaldiAkka
-      ++ Libs.bijection
+    ) ++ Libs.microservice,
+    makeScript <<= (stage in Universal, stagingDirectory in Universal, baseDirectory in ThisBuild, streams) map { (_, dir, cwd, streams) =>
+      var path = dir / "bin" / "cassie-service"
+      sbt.Process(Seq("ln", "-sf", path.toString, "cassie-service"), cwd) ! streams.log
+    }
   ).dependsOn(core, catalogue)
 
 
