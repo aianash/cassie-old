@@ -8,6 +8,7 @@ import akka.actor.ActorSystem
 import akka.util.Timeout
 
 import commons.catalogue._, items._, attributes._
+import commons.owner.{StoreId, BrandId}
 
 import goshoplane.commons.core.protocols._, Implicits._
 

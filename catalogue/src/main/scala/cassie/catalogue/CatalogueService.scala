@@ -1,10 +1,5 @@
 package cassie.catalogue
 
-import scala.concurrent._, duration._
-import scala.util.control.NonFatal
-import scala.util.Sorting
-import scala.math.Ordering
-
 import akka.actor.{Actor, ActorLogging, Props, ActorRef}
 import akka.actor.{PoisonPill, Terminated}
 import akka.util.Timeout
@@ -13,8 +8,6 @@ import akka.pattern.pipe
 import goshoplane.commons.core.protocols._, Implicits._
 
 import goshoplane.commons._
-
-import scalaz._, Scalaz._
 
 
 class CatalogueService extends Actor with ActorLogging {

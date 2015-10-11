@@ -14,7 +14,7 @@ import com.websudos.phantom.dsl._
 import cassie.catalogue.CatalogueSettings
 
 import commons.catalogue._, collection._
-
+import commons.owner.StoreId
 
 
 sealed class CatalogueDatastore(val settings: CatalogueSettings) extends CatalogueConnector {

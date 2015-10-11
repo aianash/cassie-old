@@ -45,7 +45,7 @@ object CassieBuild extends Build with StandardLibraries {
     id = "cassie",
     base = file("."),
     settings = Project.defaultSettings
-  ).aggregate(core, service, catalogue)
+  ).aggregate(core, service, catalogue, store)
 
 
   lazy val core = Project(
@@ -86,6 +86,31 @@ object CassieBuild extends Build with StandardLibraries {
       ++ Libs.logback
       ++ Libs.phantom
       ++ Libs.playJson
+      ++ Libs.commonsCatalogue
+  ).dependsOn(core)
+
+
+  lazy val store = Project(
+    id = "cassie-store",
+    base = file("store"),
+    settings = Project.defaultSettings ++
+      sharedSettings
+      // SbtStartScript.startScriptForClassesSettings
+  ).settings(
+    name := "cassie-store",
+
+    assemblyMergeStrategy in assembly := {
+      case PathList(ps @ _*) if ps.last endsWith ".txt.1" => MergeStrategy.first
+      case x =>
+        val oldStrategy = (assemblyMergeStrategy in assembly).value
+        oldStrategy(x)
+    },
+
+    libraryDependencies ++= Seq(
+    ) ++ Libs.akka
+      ++ Libs.slf4j
+      ++ Libs.logback
+      ++ Libs.phantom
       ++ Libs.commonsCatalogue
   ).dependsOn(core)
 
@@ -131,7 +156,7 @@ object CassieBuild extends Build with StandardLibraries {
       var path = dir / "bin" / "cassie-service"
       sbt.Process(Seq("ln", "-sf", path.toString, "cassie-service"), cwd) ! streams.log
     }
-  ).dependsOn(core, catalogue)
+  ).dependsOn(core, catalogue, store)
 
 
 }

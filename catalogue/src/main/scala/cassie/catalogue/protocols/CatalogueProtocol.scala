@@ -3,6 +3,7 @@ package cassie.catalogue.protocols
 import goshoplane.commons.core.protocols.Replyable
 
 import commons.catalogue._, collection._
+import commons.owner.StoreId
 
 sealed trait CatalogueMessages
 

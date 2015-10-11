@@ -11,6 +11,7 @@ import scalaz.syntax.monad._
 import com.websudos.phantom.dsl._
 
 import commons.catalogue._
+import commons.owner.StoreId
 
 
 sealed class StoreCatalogueItems extends CassandraTable[ConcreteStoreCatalogueItems, (CatalogueItemId, StoreId, ByteBuffer)] {
