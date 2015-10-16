@@ -9,12 +9,13 @@ import goshoplane.commons.core.protocols._, Implicits._
 
 import goshoplane.commons._
 
+import cassie.core.protocols.catalogue._
+
 
 class CatalogueService extends Actor with ActorLogging {
 
   private val settings = CatalogueSettings(context.system)
 
-  import protocols._
   import settings._
   import store.CatalogueDatastore
   import context.dispatcher
@@ -26,10 +27,10 @@ class CatalogueService extends Actor with ActorLogging {
   def receive = {
 
     case InsertStoreCatalogueItem(items) =>
-      catalogueDatastore.insertStoreCatalogueItems(items) pipeTo sender()
+      catalogueDatastore.insertStoreCatalogueItems(items.items) pipeTo sender()
 
     case InsertBrandCatalogueItem(items) =>
-      catalogueDatastore.insertBrandCatalogueItems(items) pipeTo sender()
+      catalogueDatastore.insertBrandCatalogueItems(items.items) pipeTo sender()
 
     case GetBrandCatalogueItems(itemsIds) =>
       catalogueDatastore.getBrandCatalogueItems(itemsIds) pipeTo sender()

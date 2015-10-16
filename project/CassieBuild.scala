@@ -61,6 +61,7 @@ object CassieBuild extends Build with StandardLibraries {
     ) ++ Libs.scalaz
       ++ Libs.akka
       ++ Libs.scaldi
+      ++ Libs.commonsCatalogue
   )
 
 

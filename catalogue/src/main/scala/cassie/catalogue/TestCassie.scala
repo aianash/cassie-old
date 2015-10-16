@@ -12,7 +12,7 @@ import commons.owner.{StoreId, BrandId}
 
 import goshoplane.commons.core.protocols._, Implicits._
 
-import protocols._
+import cassie.core.protocols.catalogue._
 
 object TestCassie {
 
@@ -36,13 +36,15 @@ object TestCassie {
     val gender = Male
     val images = Images("http://goshoplane.com", Seq("http://goshoplane.com"))
     val itemUrl = ItemUrl("http://goshoplane.com")
+    val fit = ApparelFit("Slim")
+    val fabric = ApparelFabric("Cotton")
 
     val branditem =
       MensTShirt.builder.forBrand
                 .ids(brandId, itemId, variantId)
                 .title(title)
                 .namedType(namedType)
-                .clothing(brand, price, sizes, colors, itemStyles, description, stylingTips, gender, images, itemUrl)
+                .clothing(brand, price, sizes, colors, itemStyles, description, stylingTips, gender, images, itemUrl, fit, fabric)
                 .build
 
     val storeId = StoreId(987654L)
