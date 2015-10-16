@@ -19,10 +19,7 @@ class CatalogueProtocolSerializer extends Serializer {
   def identifier = 7891886
 
   def toBinary(obj: AnyRef): Array[Byte] = obj match {
-    case InsertStoreCatalogueItem(items) =>
-      (for(one <- Try(items.toBinary)) yield {
-        one
-      }) get
+    case InsertStoreCatalogueItem(items) => items.toBinary
     case _ => throw new IllegalArgumentException("Provided parameter cannot be serialized by CatalogueProtocolSerializer")
   }
 
