@@ -7,12 +7,13 @@ import akka.pattern.pipe
 
 import goshoplane.commons.core.protocols._, Implicits._
 
+import cassie.core.protocols.store._
+
 
 class StoreService extends Actor with ActorLogging {
 
   private val settings = StoreSettings(context.system)
 
-  import protocols._
   import settings._
   import store.StoreDatastore
   import context.dispatcher

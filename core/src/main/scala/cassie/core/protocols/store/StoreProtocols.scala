@@ -1,4 +1,4 @@
-package cassie.store.protocols
+package cassie.core.protocols.store
 
 import goshoplane.commons.core.protocols._, Implicits._
 
